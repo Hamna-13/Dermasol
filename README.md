@@ -34,11 +34,9 @@ Agentic DermaSol aims to create an affordable, accessible, and localized AI-powe
 
 ## Market Potential
 - **Target Users:** Skincare enthusiasts, individuals with dermatological concerns, and dermatology clinics seeking AI-assisted diagnostic tools specifically designed for Asian skin tones.
-- **Growing Demand:** Increasing awareness about skincare and rising prevalence of skin conditions in Asian populations create a significant market need for accessible dermatology solutions.
 - **Accessibility:** Provides cost-effective dermatology assistance accessible through smartphones, addressing the gap where specialist consultations may be limited or expensive.
 - **Safety and Trust:** Transparent AI outputs and evidence-based recommendations build user trust and differentiate the product from generic online skincare advice.
 - **Partnership Opportunities:** Collaboration with dermatology clinics, skincare brands, and healthcare providers to integrate AI-assisted diagnostics and enhance service offerings.
-- **Scalability:** Potential to expand to other regions and skin types by adapting the AI models and product recommendations for broader dermatological needs.
 
 ## Competitor Analysis
 Unlike SkinVision, Miiskin, or YouCam, Agentic DermaSol offers broader dermatological coverage, personalized recommendations, and medically inspired advice tailored to Asian populations.
