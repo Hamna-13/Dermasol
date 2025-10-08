@@ -22,16 +22,6 @@ Agentic DermaSol aims to create an affordable, accessible, and localized AI-powe
 - **Database:** PostgreSQL, MongoDB
 - **Tools:** GitHub, Postman, Docker
 
-## Development Timeline
-| Month | Milestone | Deliverable |
-|-------|-------------|--------------|
-| 1     | Dataset Collection | Asian skin dataset prepared |
-| 2     | Prototype AI Model | Basic skin condition detection |
-| 3     | Backend Setup | Django APIs + DB schema |
-| 4     | Frontend Development | Image upload & output UI |
-| 5     | Agentic RAG Integration | Local product recommendations |
-| 6     | Testing & Deployment | Beta release + documentation |
-
 ## Market Potential
 - **Target Users:** Skincare enthusiasts, individuals with dermatological concerns, and dermatology clinics seeking AI-assisted diagnostic tools specifically designed for Asian skin tones.
 - **Accessibility:** Provides cost-effective dermatology assistance accessible through smartphones, addressing the gap where specialist consultations may be limited or expensive.
