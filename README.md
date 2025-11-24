@@ -1,5 +1,5 @@
 # Agentic DermaSol
-
+##
 ## Overview
 Agentic DermaSol is an innovative AI-driven dermatology assistant tailored specifically for Asian skin tones. It leverages advanced computer vision, NLP, and retrieval-augmented generation (RAG) techniques to detect skin conditions, interpret symptoms, and provide localized skincare recommendations.
 
