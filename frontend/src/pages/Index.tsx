@@ -39,10 +39,11 @@ const Index = () => {
                 </Button>
               </Link>
               <Link to="/about">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
-                  Learn More
-                </Button>
-              </Link>
+  <Button size="lg" variant="secondary" className="w-full sm:w-auto text-lg">
+    Learn More
+  </Button>
+</Link>
+
             </div>
           </div>
         </div>

@@ -8,20 +8,47 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import Navigation from "@/components/Navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { apiFetch } from "@/lib/api";
+
+type ConsultationResponse = {
+  id: number;
+  user_id: string;
+  age?: number | null;
+  gender?: string | null;
+  symptoms?: string | null;
+  medical_history?: string | null;
+  image_url?: string | null;
+  diagnosis?: string | null;
+  confidence?: number | null;
+  status: string;
+  created_at: string;
+};
 
 const Analysis = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [symptoms, setSymptoms] = useState("");
-  const { user, isAuthenticated } = useAuth();
+const [submitting, setSubmitting] = useState(false);
+
+  const { user, isAuthenticated, loading, getAccessToken } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
+    
+    if (loading) return;
+
     if (!isAuthenticated) {
-      navigate('/auth');
+      navigate("/auth");
     }
-  }, [isAuthenticated, navigate]);
+  }, [loading, isAuthenticated, navigate]);
+
+  useEffect(() => {
+    return () => {
+      // cleanup preview blob url
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -32,47 +59,56 @@ const Analysis = () => {
     }
   };
 
-  const handleAnalysis = () => {
-    if (!selectedFile || !symptoms || !user) return;
+  const handleAnalysis = async () => {
+  if (!selectedFile || !symptoms.trim() || !user) return;
 
-    const conditions = ['Eczema', 'Psoriasis', 'Acne Vulgaris', 'Rosacea', 'Contact Dermatitis'];
-    const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
-    const confidence = Math.floor(Math.random() * 20) + 75;
+  try {
+    setSubmitting(true);
 
-    const analysis = {
-      id: crypto.randomUUID(),
-      userId: user.id,
-      imageUrl: previewUrl,
-      symptoms,
-      result: randomCondition,
-      confidence,
-      date: new Date().toISOString()
-    };
+    const token = await getAccessToken();
+    if (!token) throw new Error("You are not logged in.");
 
-    const analyses = JSON.parse(localStorage.getItem('dermaSolAnalyses') || '[]');
-    analyses.push(analysis);
-    localStorage.setItem('dermaSolAnalyses', JSON.stringify(analyses));
+    const form = new FormData();
+    form.append("symptoms", symptoms);
+    form.append("image", selectedFile);
+
+    const result = (await apiFetch("/consultations/", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    })) as ConsultationResponse;
 
     toast({
-      title: 'Analysis Complete',
-      description: `Detected: ${randomCondition} with ${confidence}% confidence`
+      title: "Analysis Complete",
+      description: `Detected: ${result.diagnosis ?? "Unknown"}${
+        typeof result.confidence === "number"
+          ? ` (${Math.round(result.confidence * 100)}% confidence)`
+          : ""
+      }`,
     });
 
-    setSelectedFile(null);
-    setPreviewUrl('');
-    setSymptoms('');
-  };
+    // ✅ DO NOT clear form here
+
+  } catch (error) {
+    toast({
+      title: "Analysis failed",
+      description: error instanceof Error ? error.message : "Something went wrong",
+      variant: "destructive",
+    });
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
+
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4 text-foreground">
-              Skin Condition Analysis
-            </h1>
+            <h1 className="text-4xl font-bold mb-4 text-foreground">Skin Condition Analysis</h1>
             <p className="text-xl text-muted-foreground">
               Upload an image and describe your symptoms for AI-powered analysis
             </p>
@@ -81,52 +117,42 @@ const Analysis = () => {
           <Alert className="mb-8 border-primary/30 bg-primary/5">
             <AlertCircle className="h-4 w-4 text-primary" />
             <AlertDescription className="text-foreground">
-              <strong>Medical Disclaimer:</strong> This tool provides preliminary assessments only. 
-              Always consult qualified dermatologists or healthcare professionals for accurate diagnosis and treatment.
+              <strong>Medical Disclaimer:</strong> This tool provides preliminary assessments only. Always consult qualified
+              dermatologists or healthcare professionals for accurate diagnosis and treatment.
             </AlertDescription>
           </Alert>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Image Upload Section */}
             <Card className="shadow-professional">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileImage className="h-5 w-5 text-primary" />
                   Upload Image
                 </CardTitle>
-                <CardDescription>
-                  Provide a clear photo of the affected skin area
-                </CardDescription>
+                <CardDescription>Provide a clear photo of the affected skin area</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div 
+                  <div
                     className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer"
-                    onClick={() => document.getElementById('file-input')?.click()}
+                    onClick={() => document.getElementById("file-input")?.click()}
                   >
                     {previewUrl ? (
                       <div className="space-y-4">
-                        <img 
-                          src={previewUrl} 
-                          alt="Preview" 
-                          className="max-h-64 mx-auto rounded-lg"
-                        />
-                        <p className="text-sm text-muted-foreground">
-                          {selectedFile?.name}
-                        </p>
+                        <img src={previewUrl} alt="Preview" className="max-h-64 mx-auto rounded-lg" />
+                        <p className="text-sm text-muted-foreground">{selectedFile?.name}</p>
                       </div>
                     ) : (
                       <div className="space-y-4">
                         <Upload className="h-12 w-12 text-muted-foreground mx-auto" />
                         <div>
                           <p className="font-medium text-foreground">Click to upload image</p>
-                          <p className="text-sm text-muted-foreground">
-                            PNG, JPG up to 10MB
-                          </p>
+                          <p className="text-sm text-muted-foreground">PNG, JPG up to 10MB</p>
                         </div>
                       </div>
                     )}
                   </div>
+
                   <input
                     id="file-input"
                     type="file"
@@ -138,84 +164,40 @@ const Analysis = () => {
               </CardContent>
             </Card>
 
-            {/* Symptoms Description Section */}
             <Card className="shadow-professional">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-primary" />
                   Describe Symptoms
                 </CardTitle>
-                <CardDescription>
-                  Provide details about your skin condition
-                </CardDescription>
+                <CardDescription>Provide details about your skin condition</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <Textarea
-                    placeholder="Describe your symptoms in detail...&#10;&#10;Example:&#10;- When did you first notice the condition?&#10;- Is there any pain, itching, or burning?&#10;- Have you tried any treatments?&#10;- Any relevant medical history?"
+                    placeholder="Describe your symptoms in detail..."
                     value={symptoms}
                     onChange={(e) => setSymptoms(e.target.value)}
                     className="min-h-[280px] resize-none"
                   />
-                  <div className="text-sm text-muted-foreground">
-                    <p className="font-medium mb-2">Include information about:</p>
-                    <ul className="list-disc list-inside space-y-1">
-                      <li>Duration and progression</li>
-                      <li>Associated symptoms</li>
-                      <li>Previous treatments</li>
-                      <li>Allergies or medical conditions</li>
-                    </ul>
-                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Analysis Button */}
           <div className="mt-8 text-center">
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               className="text-lg px-8"
               onClick={handleAnalysis}
-              disabled={!selectedFile || !symptoms.trim()}
+              disabled={!selectedFile || !symptoms.trim() || loading || !isAuthenticated || submitting}
+
             >
               Analyze Skin Condition
             </Button>
-            <p className="text-sm text-muted-foreground mt-4">
-              Analysis typically takes 30-60 seconds
-            </p>
-          </div>
 
-          {/* Guidelines Section */}
-          <Card className="mt-12 shadow-professional border-primary/20">
-            <CardHeader>
-              <CardTitle className="text-primary">Photography Guidelines</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-semibold mb-2 text-foreground">✓ Do:</h4>
-                  <ul className="space-y-1 text-muted-foreground">
-                    <li>• Use good natural lighting</li>
-                    <li>• Keep camera steady and focused</li>
-                    <li>• Capture the entire affected area</li>
-                    <li>• Take photos from multiple angles if needed</li>
-                    <li>• Ensure the area is clean</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2 text-foreground">✗ Don't:</h4>
-                  <ul className="space-y-1 text-muted-foreground">
-                    <li>• Use flash photography</li>
-                    <li>• Take blurry or dark photos</li>
-                    <li>• Apply filters or editing</li>
-                    <li>• Crop too closely</li>
-                    <li>• Include identifying information</li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            <p className="text-sm text-muted-foreground mt-4">Analysis typically takes 30-60 seconds</p>
+          </div>
         </div>
       </div>
     </div>

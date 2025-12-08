@@ -1,0 +1,26 @@
+# backend/ml_models/classes.py
+
+DISEASE_CLASSES = [
+    "Acne",
+    "Actinic Keratosis",
+    "Benign Tumors",
+    "Bullous",
+    "Candidiasis",
+    "Drug Eruption",
+    "Eczema",
+    "Infestations/Bites",
+    "Lichen",
+    "Lupus",
+    "Moles",
+    "Psoriasis",
+    "Rosacea",
+    "Seborrheic Keratoses",
+    "Skin Cancer",
+    "Sun/Sunlight Damage",
+    "Tinea",
+    "Unknown/Normal",
+    "Vascular Tumors",
+    "Vasculitis",
+    "Vitiligo",
+    "Warts",
+]

@@ -1,14 +1,68 @@
+import os
 from fastapi import FastAPI, Depends
 from sqlalchemy import text
 from database import get_db
+from routers import auth, user, consultation
+from database import Base, engine
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
+from models import Profile, Consultation
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8001",      # your vite runs on 8001 sometimes
+        "http://127.0.0.1:8001",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+# include routers
+app.include_router(auth.router)
+app.include_router(user.router)
+app.include_router(consultation.router)
 @app.get("/")
 def root():
     return {"message": "FastAPI is running"}
+
+@app.get("/ping")
+def ping():
+    return {"ok": True, "message": "backend connected"}
 
 @app.get("/test-db")
 def test_db(db = Depends(get_db)):
     result = db.execute(text("SELECT version();"))
     return {"db_version": result.fetchone()}
+
+
+# ==============================
+# 🚀 FIX OPENAPI FOR HTTPBEARER
+# ==============================
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title="Dermasol API",
+        version="1.0.0",
+        description="Skin Diagnosis Backend API",
+        routes=app.routes,
+    )
+
+    # ✅ Correct HTTP Bearer scheme for Swagger UI
+    openapi_schema["components"]["securitySchemes"] = {
+        "HTTPBearer": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT"
+        }
+    }
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
