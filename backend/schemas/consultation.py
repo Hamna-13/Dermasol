@@ -4,7 +4,8 @@ from typing import Optional
 from uuid import UUID
 
 class ConsultationOut(BaseModel):
-    id: int
+    # id: int
+    id: UUID
     user_id: UUID
 
     age: Optional[int] = Field(..., ge=0, le=120)

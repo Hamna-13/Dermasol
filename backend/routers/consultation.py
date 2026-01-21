@@ -1,110 +1,199 @@
-import os
+# import uuid
+# from datetime import datetime
+# from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException
+
+# from utils.auth_utils import get_current_user
+
+# from ml_models.predict import predict_disease
+# from ml_models.nlp_inference import predict_from_history
+# from ml_models.llm_response import generate_llm_response
+# from decision_layer import decide_context
+
+
+# router = APIRouter(prefix="/consultations", tags=["Consultations"])
+
+
+# @router.post("/")
+# def create_consultation(
+#     age: int | None = Form(None),
+#     gender: str | None = Form(None),
+#     symptoms: str = Form(...),
+#     medical_history: str | None = Form(None),
+#     image: UploadFile = File(...),
+#     # current_user=Depends(get_current_user),
+# ):
+#     # -------------------------------
+#     # 1️⃣ Read image (IN-MEMORY ONLY)
+#     # -------------------------------
+#     file_bytes = image.file.read()
+#     if not file_bytes:
+#         raise HTTPException(status_code=400, detail="Empty image file")
+
+#     # -------------------------------
+#     # 2️⃣ CV inference
+#     # -------------------------------
+#     try:
+#         _, pred_label, confidence = predict_disease(file_bytes)
+#         cv_result = {
+#             "label": pred_label,
+#             "confidence": confidence
+#         }
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"CV inference failed: {str(e)}")
+
+#     # -------------------------------
+#     # 3️⃣ NLP inference
+#     # -------------------------------
+#     try:
+#         nlp_result = predict_from_history(symptoms)
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"NLP inference failed: {str(e)}")
+
+#     # -------------------------------
+#     # 4️⃣ Decision layer (CV > NLP)
+#     # -------------------------------
+#     decision_context = decide_context(
+#         cv_result=cv_result,
+#         nlp_result=nlp_result,
+#         user_text=symptoms
+#     )
+
+#     # -------------------------------
+#     # 5️⃣ LLM response generation
+#     # -------------------------------
+#     try:
+#         llm_response = generate_llm_response(decision_context)
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"LLM generation failed: {str(e)}")
+
+#     # -------------------------------
+#     # 6️⃣ Return PURE RESPONSE
+#     # -------------------------------
+#     return {
+#     "id": str(uuid.uuid4()),
+#     "status": "COMPLETED",
+#     "created_at": datetime.utcnow().isoformat(),
+#     "response": llm_response
+# }
+
+
 import uuid
-from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException
-from sqlalchemy.orm import Session
-from supabase import create_client
+import json
+import traceback
+from datetime import datetime
+from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 
-from database import get_db
-from models.consultation import Consultation
-from utils.auth_utils import get_current_user
-from schemas.consultation import ConsultationOut  # <-- use schema
-
-load_dotenv()
+from ml_models.predict import predict_disease
+from ml_models.nlp_inference import predict_from_history
+from ml_models.llm_response import generate_llm_response
+from decision_layer import decide_context
 
 router = APIRouter(prefix="/consultations", tags=["Consultations"])
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-BUCKET = os.getenv("SUPABASE_BUCKET", "consultation_images")
 
-if not SUPABASE_URL or not SERVICE_KEY:
-    raise RuntimeError("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env")
-
-supabase_admin = create_client(SUPABASE_URL, SERVICE_KEY)
-
-@router.post("/", response_model=ConsultationOut)
+@router.post("/")
 def create_consultation(
-    age: int | None = Form(None),
-    gender: str | None= Form(None),
-    symptoms: str  = Form(...),
-    medical_history: str | None = Form(None),
+    symptoms: str = Form(...),
     image: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
 ):
-    # 1) Create DB row
-    consultation = Consultation(
-        user_id=current_user["id"],
-        age=age,
-        gender=gender,
-        symptoms=symptoms,
-        medical_history=medical_history,
-        status="PENDING",
-    )
-    db.add(consultation)
-    db.commit()
-    db.refresh(consultation)
-
-    # 2) Upload image to Supabase Storage
     try:
-        ext = (image.filename.split(".")[-1] if image.filename and "." in image.filename else "jpg").lower()
-        file_name = f"{uuid.uuid4()}.{ext}"
-        storage_path = f"{current_user['id']}/{consultation.id}/{file_name}"
+        print(">>> STEP 1: endpoint entered")
 
         file_bytes = image.file.read()
-        if not file_bytes:
-            raise HTTPException(status_code=400, detail="Empty image file")
+        print(">>> STEP 2: image read, bytes =", len(file_bytes))
 
-        supabase_admin.storage.from_(BUCKET).upload(
-            path=storage_path,
-            file=file_bytes,
-            file_options={
-                "content-type": image.content_type or "application/octet-stream",
-            },
+        print(">>> STEP 3: CV inference start")
+        _, pred_label, confidence = predict_disease(file_bytes)
+        print(">>> STEP 3: CV inference done")
+
+        cv_result = {
+            "label": pred_label,
+            "confidence": confidence
+        }
+
+        print(">>> STEP 4: NLP inference start")
+        nlp_result = predict_from_history(symptoms)
+        print(">>> STEP 4: NLP inference done")
+
+        print(">>> STEP 5: decision layer start")
+        decision_context = decide_context(
+            cv_result=cv_result,
+            nlp_result=nlp_result,
+            user_text=symptoms
         )
+        print(">>> STEP 5: decision layer done")
+
+        print(">>> STEP 6: LLM start")
+        llm_response = generate_llm_response(decision_context)
+        print(">>> STEP 6: LLM done")
+
+        print(">>> STEP 7: LLM type =", type(llm_response))
+
+        if isinstance(llm_response, str):
+            print(">>> STEP 7b: parsing LLM JSON string")
+            llm_response = json.loads(llm_response)
+
+        print(">>> STEP 8: returning response")
+
+        return {
+            "id": str(uuid.uuid4()),
+            "status": "COMPLETED",
+            "created_at": datetime.utcnow().isoformat(),
+            "response": llm_response
+        }
+
     except Exception as e:
-        db.delete(consultation)
-        db.commit()
-        raise HTTPException(status_code=500, detail=f"Image upload failed: {str(e)}")
+        print("❌ EXCEPTION CAUGHT")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
-    # 3) Save bucket/path in DB
-    consultation.image_bucket = BUCKET
-    consultation.image_path = storage_path
-    db.commit()
-    db.refresh(consultation)
 
-    # 4) Signed URL (1 hour)
-    signed = supabase_admin.storage.from_(BUCKET).create_signed_url(storage_path, 60 * 60)
-    image_url = signed.get("signedURL") or signed.get("signed_url")
 
-    # 5) ML inference (LAZY IMPORT HERE ✅)
-    confidence = None
-    try:
-        from ml_models.predict import predict_disease  # <-- moved here
+# import uuid
+# from datetime import datetime
+# from fastapi import APIRouter, Depends, File, Form, UploadFile, HTTPException
 
-        pred_idx, pred_label, confidence = predict_disease(file_bytes)
-        consultation.diagnosis = pred_label
-        consultation.status = "COMPLETED"
-        db.commit()
-        db.refresh(consultation)
-    except Exception as e:
-        consultation.status = "FAILED"
-        db.commit()
-        raise HTTPException(status_code=500, detail=f"Model inference failed: {str(e)}")
+# from utils.auth_utils import get_current_user
+# from schemas.consultation import ConsultationOut
 
-    return {
-        "id": consultation.id,
-        "user_id": consultation.user_id,
-        "age": consultation.age,
-        "gender": consultation.gender,
-        "symptoms": consultation.symptoms,
-        "medical_history": consultation.medical_history,
-        "image_bucket": consultation.image_bucket,
-        "image_path": consultation.image_path,
-        "image_url": image_url,
-        "diagnosis": consultation.diagnosis,
-        "confidence": confidence,
-        "status": consultation.status,
-        "created_at": consultation.created_at,
-    }
+# router = APIRouter(prefix="/consultations", tags=["Consultations"])
+
+
+# @router.post("/", response_model=ConsultationOut)
+# def create_consultation(
+#     age: int | None = Form(None),
+#     gender: str | None = Form(None),
+#     symptoms: str = Form(...),
+#     medical_history: str | None = Form(None),
+#     image: UploadFile = File(...),
+#     current_user=Depends(get_current_user),
+# ):
+#     # 🔹 Read image into memory
+#     file_bytes = image.file.read()
+#     if not file_bytes:
+#         raise HTTPException(status_code=400, detail="Empty image file")
+
+#     # 🔹 Run ML inference
+#     try:
+#         from ml_models.predict import predict_disease
+
+#         _, pred_label, confidence = predict_disease(file_bytes)
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Model inference failed: {str(e)}")
+
+#     # 🔹 Return response only (NO persistence)
+#     return {
+#         "id": str(uuid.uuid4()),          # ephemeral ID
+#         "user_id": current_user["id"],
+#         "age": age,
+#         "gender": gender,
+#         "symptoms": symptoms,
+#         "medical_history": medical_history,
+#         "image_bucket": None,
+#         "image_path": None,
+#         "image_url": None,
+#         "diagnosis": pred_label,
+#         "confidence": confidence,
+#         "status": "COMPLETED",
+#         "created_at": datetime.utcnow(),
+#     }

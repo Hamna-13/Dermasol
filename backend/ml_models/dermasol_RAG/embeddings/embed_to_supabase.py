@@ -48,4 +48,4 @@ for chunk in tqdm(chunks):
 
     supabase.table("dermnet_embeddings").insert(record).execute()
 
-print("✅ All embeddings stored in Supabase")
+print("All embeddings stored in Supabase")
