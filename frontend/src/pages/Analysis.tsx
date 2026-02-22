@@ -1,212 +1,3 @@
-// import { useState, useEffect } from "react";
-// import { Upload, FileImage, MessageSquare, AlertCircle } from "lucide-react";
-// import { useNavigate } from "react-router-dom";
-// import { Button } from "@/components/ui/button";
-// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-// import { Textarea } from "@/components/ui/textarea";
-// import { Alert, AlertDescription } from "@/components/ui/alert";
-// import Navigation from "@/components/Navigation";
-// import { useAuth } from "@/hooks/useAuth";
-// import { useToast } from "@/hooks/use-toast";
-// import { apiFetch } from "@/lib/api";
-
-// type ConsultationResponse = {
-//   id: number;
-//   user_id: string;
-//   age?: number | null;
-//   gender?: string | null;
-//   symptoms?: string | null;
-//   medical_history?: string | null;
-//   image_url?: string | null;
-//   diagnosis?: string | null;
-//   confidence?: number | null;
-//   status: string;
-//   created_at: string;
-// };
-
-// const Analysis = () => {
-//   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-//   const [previewUrl, setPreviewUrl] = useState<string>("");
-//   const [symptoms, setSymptoms] = useState("");
-// const [submitting, setSubmitting] = useState(false);
-
-//   const { user, isAuthenticated, loading, getAccessToken } = useAuth();
-//   const navigate = useNavigate();
-//   const { toast } = useToast();
-
-//   useEffect(() => {
-    
-//     if (loading) return;
-
-//     if (!isAuthenticated) {
-//       navigate("/auth");
-//     }
-//   }, [loading, isAuthenticated, navigate]);
-
-//   useEffect(() => {
-//     return () => {
-//       // cleanup preview blob url
-//       if (previewUrl) URL.revokeObjectURL(previewUrl);
-//     };
-//   }, [previewUrl]);
-
-//   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-//     const file = event.target.files?.[0];
-//     if (file) {
-//       setSelectedFile(file);
-//       const url = URL.createObjectURL(file);
-//       setPreviewUrl(url);
-//     }
-//   };
-
-//   const handleAnalysis = async () => {
-//   if (!selectedFile || !symptoms.trim() || !user) return;
-
-//   try {
-//     setSubmitting(true);
-
-//     const token = await getAccessToken();
-//     if (!token) throw new Error("You are not logged in.");
-
-//     const form = new FormData();
-//     form.append("symptoms", symptoms);
-//     form.append("image", selectedFile);
-
-//     const result = (await apiFetch("/consultations/", {
-//       method: "POST",
-//       headers: { Authorization: `Bearer ${token}` },
-//       body: form,
-//     })) as ConsultationResponse;
-
-//     toast({
-//       title: "Analysis Complete",
-//       description: `Detected: ${result.diagnosis ?? "Unknown"}${
-//         typeof result.confidence === "number"
-//           ? ` (${Math.round(result.confidence * 100)}% confidence)`
-//           : ""
-//       }`,
-//     });
-
-//     // ✅ DO NOT clear form here
-
-//   } catch (error) {
-//     toast({
-//       title: "Analysis failed",
-//       description: error instanceof Error ? error.message : "Something went wrong",
-//       variant: "destructive",
-//     });
-//   } finally {
-//     setSubmitting(false);
-//   }
-// };
-
-
-//   return (
-//     <div className="min-h-screen bg-background">
-//       <Navigation />
-
-//       <div className="container mx-auto px-4 py-12">
-//         <div className="max-w-4xl mx-auto">
-//           <div className="text-center mb-12">
-//             <h1 className="text-4xl font-bold mb-4 text-foreground">Skin Condition Analysis</h1>
-//             <p className="text-xl text-muted-foreground">
-//               Upload an image and describe your symptoms for AI-powered analysis
-//             </p>
-//           </div>
-
-//           <Alert className="mb-8 border-primary/30 bg-primary/5">
-//             <AlertCircle className="h-4 w-4 text-primary" />
-//             <AlertDescription className="text-foreground">
-//               <strong>Medical Disclaimer:</strong> This tool provides preliminary assessments only. Always consult qualified
-//               dermatologists or healthcare professionals for accurate diagnosis and treatment.
-//             </AlertDescription>
-//           </Alert>
-
-//           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-//             <Card className="shadow-professional">
-//               <CardHeader>
-//                 <CardTitle className="flex items-center gap-2">
-//                   <FileImage className="h-5 w-5 text-primary" />
-//                   Upload Image
-//                 </CardTitle>
-//                 <CardDescription>Provide a clear photo of the affected skin area</CardDescription>
-//               </CardHeader>
-//               <CardContent>
-//                 <div className="space-y-4">
-//                   <div
-//                     className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer"
-//                     onClick={() => document.getElementById("file-input")?.click()}
-//                   >
-//                     {previewUrl ? (
-//                       <div className="space-y-4">
-//                         <img src={previewUrl} alt="Preview" className="max-h-64 mx-auto rounded-lg" />
-//                         <p className="text-sm text-muted-foreground">{selectedFile?.name}</p>
-//                       </div>
-//                     ) : (
-//                       <div className="space-y-4">
-//                         <Upload className="h-12 w-12 text-muted-foreground mx-auto" />
-//                         <div>
-//                           <p className="font-medium text-foreground">Click to upload image</p>
-//                           <p className="text-sm text-muted-foreground">PNG, JPG up to 10MB</p>
-//                         </div>
-//                       </div>
-//                     )}
-//                   </div>
-
-//                   <input
-//                     id="file-input"
-//                     type="file"
-//                     accept="image/*"
-//                     onChange={handleFileChange}
-//                     className="hidden"
-//                   />
-//                 </div>
-//               </CardContent>
-//             </Card>
-
-//             <Card className="shadow-professional">
-//               <CardHeader>
-//                 <CardTitle className="flex items-center gap-2">
-//                   <MessageSquare className="h-5 w-5 text-primary" />
-//                   Describe Symptoms
-//                 </CardTitle>
-//                 <CardDescription>Provide details about your skin condition</CardDescription>
-//               </CardHeader>
-//               <CardContent>
-//                 <div className="space-y-4">
-//                   <Textarea
-//                     placeholder="Describe your symptoms in detail..."
-//                     value={symptoms}
-//                     onChange={(e) => setSymptoms(e.target.value)}
-//                     className="min-h-[280px] resize-none"
-//                   />
-//                 </div>
-//               </CardContent>
-//             </Card>
-//           </div>
-
-//           <div className="mt-8 text-center">
-//             <Button
-//               size="lg"
-//               className="text-lg px-8"
-//               onClick={handleAnalysis}
-//               disabled={!selectedFile || !symptoms.trim() || loading || !isAuthenticated || submitting}
-
-//             >
-//               Analyze Skin Condition
-//             </Button>
-
-//             <p className="text-sm text-muted-foreground mt-4">Analysis typically takes 30-60 seconds</p>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default Analysis;
-
-
 import { useState, useEffect } from "react";
 import { Upload, FileImage, MessageSquare, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -225,11 +16,19 @@ type ConsultationResponse = {
   status: string;
   created_at: string;
   response: {
-    summary?: string;
-    what_this_means?: string;
-    skincare_guidance?: string;
-    when_to_seek_help?: string;
+    case_type: "medical" | "skincare";
+    analysis?: string;
+    skin_type?: string;
+    intent?: string;
+    routine?: string;
+    products?: string;
+    symptoms?: string;
+    causes?: string;
+    treatment?: string;
+    precautions?: string;
+    when_to_see_doctor?: string;
     disclaimer?: string;
+    disease_confidence?: number;
   };
 };
 
@@ -237,11 +36,12 @@ type ConsultationResponse = {
 
 const Analysis = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [previewUrl, setPreviewUrl] = useState("");
   const [symptoms, setSymptoms] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [analysisResult, setAnalysisResult] =
-    useState<ConsultationResponse["response"] | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<
+  ConsultationResponse["response"] | null
+  >(null);
 
   const { user, isAuthenticated, loading, getAccessToken } = useAuth();
   const navigate = useNavigate();
@@ -263,12 +63,11 @@ const Analysis = () => {
 
   /* ---------------- HANDLERS ---------------- */
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-    }
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
   };
 
   const handleAnalysis = async () => {
@@ -292,11 +91,37 @@ const Analysis = () => {
       })) as ConsultationResponse;
 
       setAnalysisResult(result.response);
-    } catch (error) {
-      console.error("Analysis failed:", error);
+    } catch (err) {
+      console.error("Analysis failed:", err);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  /* ---------------- CONFIDENCE SLIDER ---------------- */
+
+  const ConfidenceSlider = ({ value }: { value: number }) => {
+    const percent = Math.round(value * 100);
+
+    return (
+      <div className="mb-6">
+        <div className="flex justify-between text-sm font-medium mb-2">
+          <span>Disease Confidence</span>
+          <span>{percent}%</span>
+        </div>
+
+        <div className="relative w-full h-3 bg-gray-200 rounded-full">
+          <div
+            className="h-3 bg-teal-600 rounded-full transition-all duration-500"
+            style={{ width: `${percent}%` }}
+          />
+          <div
+            className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white border-2 border-teal-600 rounded-full shadow-md transition-all duration-500"
+            style={{ left: `calc(${percent}% - 10px)` }}
+          />
+        </div>
+      </div>
+    );
   };
 
   /* ---------------- UI ---------------- */
@@ -307,42 +132,46 @@ const Analysis = () => {
 
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
+
           {/* HEADER */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4 text-foreground">
+            <h1 className="text-4xl font-bold mb-4">
               Skin Condition Analysis
             </h1>
             <p className="text-xl text-muted-foreground">
-              Upload an image and describe your symptoms for AI-powered analysis
+              Upload an image and describe your symptoms for analysis
             </p>
           </div>
 
           {/* DISCLAIMER */}
           <Alert className="mb-8 border-primary/30 bg-primary/5">
             <AlertCircle className="h-4 w-4 text-primary" />
-            <AlertDescription className="text-foreground">
-              <strong>Medical Disclaimer:</strong> This tool provides educational
-              information only and is not a medical diagnosis.
+            <AlertDescription>
+              <strong>Medical Disclaimer:</strong> This tool provides
+              educational information only and is not a medical diagnosis.
             </AlertDescription>
           </Alert>
 
-          {/* INPUT GRID */}
+          {/* INPUTS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
             {/* IMAGE */}
-            <Card className="shadow-professional">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileImage className="h-5 w-5 text-primary" />
                   Upload Image
                 </CardTitle>
                 <CardDescription>
-                  Provide a clear photo of the affected skin area
+                  Clear photo of the affected skin area
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div
-                  className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer"
-                  onClick={() => document.getElementById("file-input")?.click()}
+                  className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary"
+                  onClick={() =>
+                    document.getElementById("file-input")?.click()
+                  }
                 >
                   {previewUrl ? (
                     <>
@@ -351,18 +180,18 @@ const Analysis = () => {
                         alt="Preview"
                         className="max-h-64 mx-auto rounded-lg"
                       />
-                      <p className="text-sm text-muted-foreground mt-2">
+                      <p className="text-sm mt-2 text-muted-foreground">
                         {selectedFile?.name}
                       </p>
                     </>
                   ) : (
                     <>
-                      <Upload className="h-12 w-12 text-muted-foreground mx-auto" />
-                      <p className="font-medium mt-2">
+                      <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
+                      <p className="mt-2 font-medium">
                         Click to upload image
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        PNG, JPG up to 10MB
+                        PNG or JPG (max 10MB)
                       </p>
                     </>
                   )}
@@ -378,20 +207,20 @@ const Analysis = () => {
               </CardContent>
             </Card>
 
-            {/* TEXT */}
-            <Card className="shadow-professional">
+            {/* SYMPTOMS */}
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-primary" />
                   Describe Symptoms
                 </CardTitle>
                 <CardDescription>
-                  Provide details about your skin condition
+                  What you’ve noticed about your skin
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Textarea
-                  placeholder="Describe your symptoms in detail..."
+                  placeholder="e.g., itching, redness, dryness, duration…"
                   value={symptoms}
                   onChange={(e) => setSymptoms(e.target.value)}
                   className="min-h-[280px] resize-none"
@@ -404,7 +233,6 @@ const Analysis = () => {
           <div className="mt-8 text-center">
             <Button
               size="lg"
-              className="text-lg px-8"
               onClick={handleAnalysis}
               disabled={
                 !selectedFile ||
@@ -414,66 +242,115 @@ const Analysis = () => {
                 submitting
               }
             >
-              {submitting ? "Analyzing..." : "Analyze Skin Condition"}
+              {submitting ? "Analyzing…" : "Analyze Skin Condition"}
             </Button>
 
-            <p className="text-sm text-muted-foreground mt-4">
+            <p className="text-sm mt-4 text-muted-foreground">
               Analysis typically takes 30–60 seconds
             </p>
           </div>
 
-          {/* GROQ RESPONSE */}
+          {/* RESULTS */}
           {analysisResult && (
             <div className="mt-12">
-              <Card className="shadow-professional border-primary/30">
+              <Card className="border-primary/30">
                 <CardHeader>
                   <CardTitle className="text-primary">
                     AI Skin Analysis
                   </CardTitle>
                   <CardDescription>
-                    Personalized explanation based on your input
+                    Dermatology-style explanation based on your input
                   </CardDescription>
                 </CardHeader>
 
                 <CardContent className="space-y-6">
-                  {analysisResult.summary && (
+
+                  {/* Confidence Slider */}
+                  {analysisResult.disease_confidence !== undefined && (
+                    <ConfidenceSlider
+                      value={analysisResult.disease_confidence}
+                    />
+                  )}
+
+                  {analysisResult.analysis && (
                     <section>
-                      <h3 className="font-semibold mb-1">Summary</h3>
+                      <h3 className="font-semibold mb-1">Analysis</h3>
                       <p className="text-muted-foreground">
-                        {analysisResult.summary}
+                        {analysisResult.analysis}
                       </p>
                     </section>
                   )}
 
-                  {analysisResult.what_this_means && (
+                  {analysisResult.skin_type && (
                     <section>
-                      <h3 className="font-semibold mb-1">
-                        What this means
-                      </h3>
+                      <h3 className="font-semibold mb-1">Skin Type</h3>
                       <p className="text-muted-foreground">
-                        {analysisResult.what_this_means}
+                        Detected skin type: {analysisResult.skin_type}
+                      </p>
+                    </section>
+                  )}
+            
+                  {analysisResult.symptoms && (
+                    <section>
+                      <h3 className="font-semibold mb-1">Detected Symptoms</h3>
+                      <p className="text-muted-foreground">
+                        Symptoms include {analysisResult.symptoms}
                       </p>
                     </section>
                   )}
 
-                  {analysisResult.skincare_guidance && (
+                  {analysisResult.causes && (
                     <section>
-                      <h3 className="font-semibold mb-1">
-                        Skincare guidance
-                      </h3>
+                      <h3 className="font-semibold mb-1">Causes</h3>
                       <p className="text-muted-foreground">
-                        {analysisResult.skincare_guidance}
+                        {analysisResult.causes}
                       </p>
                     </section>
                   )}
 
-                  {analysisResult.when_to_seek_help && (
+                  {analysisResult.treatment && (
+                    <section>
+                      <h3 className="font-semibold mb-1">Treatment</h3>
+                      <p className="text-muted-foreground">
+                        {analysisResult.treatment}
+                      </p>
+                    </section>
+                  )}
+
+                  {analysisResult.precautions && (
+                    <section>
+                      <h3 className="font-semibold mb-1">Precautions</h3>
+                      <p className="text-muted-foreground">
+                        {analysisResult.precautions}
+                      </p>
+                    </section>
+                  )}
+
+                  {analysisResult.when_to_see_doctor && (
                     <section>
                       <h3 className="font-semibold mb-1">
-                        When to seek help
+                        When to Seek Professional Help
                       </h3>
                       <p className="text-muted-foreground">
-                        {analysisResult.when_to_seek_help}
+                        {analysisResult.when_to_see_doctor}
+                      </p>
+                    </section>
+                  )}
+
+                  {analysisResult.routine && (
+                    <section>
+                      <h3 className="font-semibold mb-1">Routine guide</h3>
+                      <p className="text-muted-foreground">
+                        {analysisResult.routine}
+                      </p>
+                    </section>
+                  )}
+
+                  {analysisResult.products && (
+                    <section>
+                      <h3 className="font-semibold mb-1">Key Ingredients</h3>
+                      <p className="text-muted-foreground">
+                        {analysisResult.products}
                       </p>
                     </section>
                   )}
@@ -486,6 +363,7 @@ const Analysis = () => {
                       </AlertDescription>
                     </Alert>
                   )}
+
                 </CardContent>
               </Card>
             </div>

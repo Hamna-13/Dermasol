@@ -2,7 +2,7 @@
 import torch
 from collections import OrderedDict
 
-PATH = r"D:\FYP\Dermasol\ml-models\diagnosis_model.pth"  # update if needed
+PATH = r"D:\FYP\Dermasol\ml-models\diagnosis_model_optimized.pth"  # update if needed
 obj = torch.load(PATH, map_location="cpu")
 
 print("TYPE:", type(obj))
