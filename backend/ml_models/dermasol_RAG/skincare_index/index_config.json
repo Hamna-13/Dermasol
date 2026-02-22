@@ -1,0 +1,8 @@
+{
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "dimension": 384,
+    "total_chunks": 142,
+    "created_on": "2026-02-18T00:01:02.143579",
+    "index_type": "skincare",
+    "chunking_strategy": "H2-section-based-with-metadata"
+}

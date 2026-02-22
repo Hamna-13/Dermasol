@@ -1,0 +1,8 @@
+{
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "dimension": 384,
+    "total_chunks": 469,
+    "created_on": "2026-02-20T12:16:40.410511",
+    "index_type": "IndexFlatIP (cosine similarity)",
+    "notes": "Medical index - disease filtered retrieval recommended"
+}
