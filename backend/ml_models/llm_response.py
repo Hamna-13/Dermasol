@@ -2,16 +2,20 @@
 llm_response.py
 
 Purpose:
-- Call Grok LLM with structured medical context
-- Generate safe, user-centric explanations
-- NEVER diagnose or prescribe
+- Execute LLM prompt built by RAG layer
+- Enforce strict JSON output
+- Support:
+    - Skincare case schema
+    - Medical case schema
+- Normalize output safely
+- Never hallucinate outside provided context
 """
 
 import os
-from typing import Dict, Any
-import requests
-from dotenv import load_dotenv
 import json
+import requests
+from typing import Dict
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -20,77 +24,100 @@ load_dotenv()
 # -------------------------------------------------
 
 GROK_API_KEY = os.getenv("GROK_API_KEY")
-GROK_API_URL = os.getenv("GROK_API_URL")  # e.g. https://api.x.ai/v1/chat/completions
+GROK_API_URL = os.getenv("GROK_API_URL")
 GROK_MODEL = os.getenv("GROK_MODEL", "llama-3.3-70b-versatile")
 
 if not GROK_API_KEY or not GROK_API_URL:
-    raise RuntimeError("Missing GROK_API_KEY or GROK_API_URL in .env")
+    raise RuntimeError("Missing GROK_API_KEY or GROK_API_URL")
 
 HEADERS = {
     "Authorization": f"Bearer {GROK_API_KEY}",
     "Content-Type": "application/json",
 }
 
+
 # -------------------------------------------------
-# PROMPT BUILDER
+# SAFE JSON PARSER
 # -------------------------------------------------
 
-def _build_prompt(context: Dict[str, Any]) -> str:
+def _safe_json_parse(content: str) -> Dict:
     """
-    Convert decision-layer context into a strict, safe LLM prompt.
+    Safely extract JSON even if model wraps it in markdown.
     """
 
-    return f"""
-You are a dermatology assistant for an AI system called Dermasol.
+    content = content.strip()
 
-STRICT RULES (DO NOT BREAK):
-- Do NOT diagnose diseases.
-- Do NOT prescribe medications.
-- Do NOT contradict computer vision results.
-- Do NOT mention model names or confidence thresholds.
-- Speak in calm, supportive, non-alarming language.
+    # Remove ```json fences if present
+    if content.startswith("```"):
+        content = content.strip("`")
+        content = content.replace("json", "", 1).strip()
 
-SYSTEM CONTEXT:
-- Final condition (from vision): {context['final_condition']}
-- CV confidence: {context['cv']['confidence']}
-- NLP interpretation (supportive only): {context['nlp']['label']} (confidence {context['nlp']['confidence']})
+    try:
+        parsed = json.loads(content)
+    except Exception as e:
+        raise RuntimeError(f"LLM did not return valid JSON. Raw output:\n{content}")
 
-USER DESCRIPTION:
-{context['user_text']}
+    return parsed
 
-TASK:
-- Explain what this condition generally means (educational only).
-- If CV confidence is high, focus on skincare guidance and monitoring.
-- If conflict is detected, reassure the user and suggest professional evaluation if symptoms persist.
-- Include a short medical disclaimer.
-- Keep the response structured and user-friendly.
-
-OUTPUT FORMAT (JSON):
-{{
-  "summary": "...",
-  "what_this_means": "...",
-  "skincare_guidance": "...",
-  "when_to_seek_help": "...",
-  "disclaimer": "..."
-}}
-"""
 
 # -------------------------------------------------
-# MAIN LLM CALL
+# NORMALIZATION LAYER
 # -------------------------------------------------
 
-def generate_llm_response(decision_context: Dict[str, Any]) -> Dict[str, Any]:
+def _normalize_skincare(parsed: Dict) -> Dict:
+    parsed.setdefault("case_type", "skincare")
+    parsed.setdefault("analysis", "")
+    parsed.setdefault("skin_type", "")
+    parsed.setdefault("intent", "")
+    parsed.setdefault("routine", "")
+    parsed.setdefault("ingredients", "")
+    parsed.setdefault("recommended_products", [])
+    parsed.setdefault("disclaimer", "")
+
+    return parsed
+
+
+def _normalize_medical(parsed: Dict) -> Dict:
+    parsed.setdefault("case_type", "medical")
+    parsed.setdefault("analysis", "")
+    parsed.setdefault("skin_type", "")
+    parsed.setdefault("symptoms", "")
+    parsed.setdefault("causes", "")
+    parsed.setdefault("precautions", "")
+    parsed.setdefault("treatment", "")
+    parsed.setdefault("when_to_see_doctor", "")
+    parsed.setdefault("disclaimer", "")
+
+    return parsed
+
+
+# -------------------------------------------------
+# MAIN LLM EXECUTION
+# -------------------------------------------------
+
+def generate_llm_response(prompt: str) -> Dict:
     """
-    Calls Grok LLM and returns structured response for frontend.
+    Accepts fully constructed RAG prompt.
+    Returns normalized structured JSON for frontend.
     """
 
     payload = {
         "model": GROK_MODEL,
         "messages": [
-            {"role": "system", "content": "You are a medical AI assistant."},
-            {"role": "user", "content": _build_prompt(decision_context)},
+            {
+                "role": "system",
+                "content": (
+                    "You are a cautious dermatologist assistant. "
+                    "Return ONLY valid JSON. Do NOT include markdown. "
+                    "Follow the schema exactly."
+                ),
+            },
+            {
+                "role": "user",
+                "content": prompt,
+            },
         ],
-        "temperature": 0.3,
+        "temperature": 0.2,
     }
 
     response = requests.post(
@@ -104,23 +131,31 @@ def generate_llm_response(decision_context: Dict[str, Any]) -> Dict[str, Any]:
         raise RuntimeError(f"Grok API error: {response.text}")
 
     data = response.json()
-    print("LLM RESPONSE TYPE:", type(response))
-    print("LLM RESPONSE:", response)
 
-    # Defensive parsing (Grok-compatible OpenAI-style schema)
     content = (
         data.get("choices", [{}])[0]
         .get("message", {})
         .get("content", "")
+        .strip()
     )
-    # Parse JSON returned by LLM
-    try:
-        parsed = json.loads(content)
-    except Exception:
-        raise RuntimeError("LLM did not return valid JSON")
 
-    return parsed
-    # return {
-    #     "llm_output": content,
-    #     "source": "Grok",
-    # }
+    parsed = _safe_json_parse(content)
+
+    # -------------------------------------------------
+    # CASE TYPE NORMALIZATION
+    # -------------------------------------------------
+
+    case_type = parsed.get("case_type")
+
+    if case_type == "skincare":
+        return _normalize_skincare(parsed)
+
+    elif case_type == "medical":
+        return _normalize_medical(parsed)
+
+    else:
+        # Fallback detection
+        if "routine" in parsed:
+            return _normalize_skincare(parsed)
+        else:
+            return _normalize_medical(parsed)
