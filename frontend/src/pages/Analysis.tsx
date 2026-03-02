@@ -11,6 +11,13 @@ import { apiFetch } from "@/lib/api";
 
 /* ---------------- TYPES ---------------- */
 
+type Product = {
+  name: string;
+  price: string;
+  image_url: string;
+  product_url: string;
+  source: string;
+};
 type ConsultationResponse = {
   id: string;
   status: string;
@@ -29,6 +36,7 @@ type ConsultationResponse = {
     when_to_see_doctor?: string;
     disclaimer?: string;
     disease_confidence?: number;
+    recommended_products?: Product[];   // ✅ ADDED
   };
 };
 
@@ -354,7 +362,45 @@ const Analysis = () => {
                       </p>
                     </section>
                   )}
+                  {/* ---------------- RECOMMENDED PRODUCTS ---------------- */}
+                  {analysisResult.recommended_products &&
+                    analysisResult.recommended_products.length > 0 && (
+                      <section>
+                        <h3 className="font-semibold mb-4">
+                          Products Recommended For You
+                        </h3>
 
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {analysisResult.recommended_products.map((product, index) => (
+                            <div
+                              key={index}
+                              className="border rounded-xl p-4 shadow-sm hover:shadow-md transition cursor-pointer bg-white"
+                              onClick={() =>
+                                window.open(product.product_url, "_blank")
+                              }
+                            >
+                              <img
+                                src={product.image_url}
+                                alt={product.name}
+                                className="h-40 w-full object-contain mb-3 rounded"
+                              />
+
+                              <h4 className="font-medium text-sm mb-1 line-clamp-2">
+                                {product.name}
+                              </h4>
+
+                              <p className="text-primary font-semibold text-sm">
+                                {product.price}
+                              </p>
+
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {product.source}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                  )}
                   {analysisResult.disclaimer && (
                     <Alert className="border-primary/30 bg-primary/5">
                       <AlertCircle className="h-4 w-4 text-primary" />
