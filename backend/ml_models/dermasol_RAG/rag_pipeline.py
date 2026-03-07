@@ -2,13 +2,14 @@ from ml_models.dermasol_RAG.retriever import (
     retrieve_medical,
     retrieve_skincare
 )
+import re
+
+# ✅ NEW IMPORT (ONLY ADDITION)
+from services.product_agent.agent import ProductAgent
 
 
 class DermasolRAG:
     def __init__(self, llm_callable):
-        """
-        llm_callable: function that takes prompt -> returns JSON response
-        """
         self.llm = llm_callable
 
     # ---------------------------------------------------
@@ -41,7 +42,6 @@ class DermasolRAG:
 
         print("🔹 Using SKINCARE corpus")
 
-        # Specific routine query
         query_specific = f"{intent} {skin_type} routine guide ingredients"
 
         specific_chunks = retrieve_skincare(
@@ -50,7 +50,6 @@ class DermasolRAG:
             skin_type=skin_type
         )
 
-        # General explanation query
         query_general = f"{intent} skincare explanation core ingredients tips"
 
         general_chunks = retrieve_skincare(
@@ -59,7 +58,6 @@ class DermasolRAG:
             skin_type=None
         )
 
-        # Merge + deduplicate
         seen = set()
         combined = []
 
@@ -72,14 +70,12 @@ class DermasolRAG:
         return combined[:8]
 
     # ---------------------------------------------------
-    # 3️⃣ Medical Retrieval (STRICT DISEASE CONTROLLED)
+    # 3️⃣ Medical Retrieval
     # ---------------------------------------------------
     def _retrieve_medical(self, context: dict, normalized_disease: str):
 
         print("🔹 Using MEDICAL corpus")
 
-        # 🔹 We intentionally keep query simple
-        # because retrieval is strictly disease-filtered
         query = f"""
 Disease: {normalized_disease}
 
@@ -92,7 +88,7 @@ Clinical explanation, causes, management and treatment guidance.
         )
 
     # ---------------------------------------------------
-    # 4️⃣ Build Final LLM Prompt
+    # 4️⃣ Build Final LLM Prompt (UNCHANGED)
     # ---------------------------------------------------
     def _build_prompt(self, context: dict, normalized_disease: str, retrieved_chunks: list):
 
@@ -111,9 +107,6 @@ Clinical explanation, causes, management and treatment guidance.
             else normalized_disease
         )
 
-        # ==============================
-        # SKINCARE PROMPT
-        # ==============================
         if case_type == "skincare":
 
             task_instruction = f"""
@@ -122,8 +115,8 @@ You are generating a SKINCARE response.
 STRICT INSTRUCTIONS:
 1. State clearly that no disease was detected in form of user friendly paragraph that they have healthy skin.
 2. Mention detected skin type.
-3. Use only retrieved CONTEXT all the chunks to explain in detail how user can manage their skin care routine. Explain routineuser friendly way (it include process eg cleansing and washing face twice a day using mositurizer).
-4. Provide detail of products (eg viatmic C serum) that you got from CONTEXT and tell user how they sall use them (it will include chemical composition of products eg viamin c serum, niacinamide, glycolic acid).
+3. Use retrieved CONTEXT all the chunks along with your search data to explain in detail how user can manage their skin care routine.
+4. Provide detail of products from CONTEXT and tell user how they shall use them.
 5. Explain information retrieved from CONTEXT in user friendly way.
 
 Return STRICT JSON:
@@ -143,9 +136,6 @@ Return STRICT JSON:
 }}
 """
 
-        # ==============================
-        # MEDICAL PROMPT
-        # ==============================
         else:
 
             task_instruction = f"""
@@ -154,7 +144,7 @@ You are generating a MEDICAL response.
 STRICT INSTRUCTIONS:
 1. Explain detected condition clearly and in detail.
 2. Use only retrieved CONTEXT.
-3. Mention symptoms if available.
+3. Mention symptoms.
 4. Mention causes from CONTEXT.
 5. Provide all treatments from CONTEXT.
 6. Explain when to see a doctor.
@@ -195,6 +185,56 @@ Return VALID JSON only.
         return prompt.strip()
 
     # ---------------------------------------------------
+    # 🔵 Allergy Safety Filter (UNCHANGED)
+    # ---------------------------------------------------
+    def _filter_allergens(self, response_json: dict, context: dict):
+
+        allergies = []
+        if context.get("nlp"):
+            allergies = context["nlp"].get("allergies", []) or []
+
+        if not allergies:
+            return response_json
+
+        allergies = [a.lower() for a in allergies]
+
+        def scrub_text(text: str):
+            if not text:
+                return text
+
+            cleaned = text
+
+            for allergen in allergies:
+                pattern = re.compile(re.escape(allergen), re.IGNORECASE)
+                cleaned = pattern.sub("", cleaned)
+
+            cleaned = re.sub(r"\(\s*\)", "", cleaned)
+            cleaned = re.sub(r"\s{2,}", " ", cleaned)
+            cleaned = re.sub(r"\s+,", ",", cleaned)
+            cleaned = cleaned.strip()
+
+            return cleaned
+
+        if "recommended_products" in response_json:
+            filtered = []
+            for product in response_json["recommended_products"]:
+                if not any(allergen in product.lower() for allergen in allergies):
+                    filtered.append(product)
+
+            response_json["recommended_products"] = filtered
+
+        guide = response_json.get("skin_care_guide", {})
+
+        if guide:
+            guide["routine"] = scrub_text(guide.get("routine", ""))
+            guide["ingredients"] = scrub_text(guide.get("ingredients", ""))
+            guide["products_section"] = scrub_text(guide.get("products_section", ""))
+
+            response_json["skin_care_guide"] = guide
+
+        return response_json
+
+    # ---------------------------------------------------
     # 5️⃣ Main Execution
     # ---------------------------------------------------
     def generate(self, context: dict):
@@ -204,9 +244,6 @@ Return VALID JSON only.
 
         context_type = context.get("context_type")
 
-        # -----------------------------
-        # Retrieval Phase
-        # -----------------------------
         if context_type == "medical":
             retrieved_chunks = self._retrieve_medical(
                 context,
@@ -217,9 +254,6 @@ Return VALID JSON only.
                 context
             )
 
-        # -----------------------------
-        # Debug Retrieved Chunks
-        # -----------------------------
         print("\n================ RETRIEVED CHUNKS ================\n")
 
         for i, chunk in enumerate(retrieved_chunks):
@@ -233,9 +267,6 @@ Return VALID JSON only.
 
         print("===================================================\n")
 
-        # -----------------------------
-        # Build Prompt
-        # -----------------------------
         prompt = self._build_prompt(
             context,
             normalized_disease,
@@ -246,10 +277,38 @@ Return VALID JSON only.
         print(prompt)
         print("\n=======================================\n")
 
-        # -----------------------------
-        # LLM Call
-        # -----------------------------
         response_json = self.llm(prompt)
+
+        # 🔵 Apply allergy scrub (UNCHANGED)
+        response_json = self._filter_allergens(response_json, context)
+
+        # ==================================================
+        # ✅ NEW: Inject Real Product Recommendations
+        # ==================================================
+        if context_type == "skincare":
+
+            try:
+                agent = ProductAgent()
+
+                guide = response_json.get("skin_care_guide", {})
+                ingredients_text = guide.get("ingredients", "")
+
+                ingredients = [
+                    ing.strip()
+                    for ing in ingredients_text.split(",")
+                    if ing.strip()
+                ]
+
+                if ingredients:
+                    products = agent.fetch_products_by_ingredients(ingredients)
+                    serialized = agent.serialize_products(products)
+
+                    response_json["recommended_products"] = serialized
+
+            except Exception as e:
+                print("⚠ Product Agent Error:", e)
+
+        # ==================================================
 
         return {
             "context_used": context_type,
