@@ -1,22 +1,18 @@
 from pydantic import BaseModel, EmailStr
+from typing import Optional
+from uuid import UUID
+from datetime import datetime
 
-# ---------- Request Schema ----------
-class UserCreate(BaseModel):
+class ProfileOut(BaseModel):
+    id: UUID
     email: EmailStr
-    password: str
-    full_name: str | None = None
-
-
-class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
-
-
-# ---------- Response Schema ----------
-class UserOut(BaseModel):
-    id: int
-    email: EmailStr
-    full_name: str | None
+    full_name: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
-        from_attributes = True   # important for SQLAlchemy
+        from_attributes = True
+
+class ProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None   # only if you want to allow email edit

@@ -1,27 +1,50 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any, Dict
 from uuid import UUID
 
-class ConsultationOut(BaseModel):
-    # id: int
+
+class ConsultationHistoryItem(BaseModel):
+    id: UUID
+    created_at: datetime
+
+    context_type: Optional[str] = None
+    cv_label: Optional[str] = None
+    disease_confidence: Optional[float] = None
+    skin_type: Optional[str] = None
+
+    image_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ConsultationDetail(BaseModel):
     id: UUID
     user_id: UUID
+    created_at: datetime
 
-    age: Optional[int] = Field(..., ge=0, le=120)
-    gender: Optional[str]
-
-    symptoms: str = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    symptoms: Optional[str] = None
     medical_history: Optional[str] = None
 
     image_bucket: Optional[str] = None
     image_path: Optional[str] = None
-    image_url: Optional[str] = None  # signed URL returned by API
+    image_url: Optional[str] = None  # ✅ add
 
-    diagnosis: Optional[str] = None
-    confidence: Optional[float] = None
+    context_type: Optional[str] = None
+    final_condition: Optional[str] = None
+
+    cv_result: Optional[Dict[str, Any]] = None
+    nlp_result: Optional[Dict[str, Any]] = None
+    decision_context: Optional[Dict[str, Any]] = None
+    rag_context_used: Optional[Any] = None
+    llm_output: Optional[Dict[str, Any]] = None
+    final_response: Optional[Dict[str, Any]] = None
+
     status: str
-    created_at: datetime
+    error: Optional[str] = None
 
     class Config:
         from_attributes = True
