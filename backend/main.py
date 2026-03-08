@@ -3,10 +3,8 @@ from fastapi import FastAPI, Depends
 from sqlalchemy import text
 from database import get_db
 from routers import auth, user, consultation
-from database import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from models import Profile, Consultation
 
 app = FastAPI()
 
@@ -15,6 +13,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:8001",      # your vite runs on 8001 sometimes
         "http://127.0.0.1:8001",
+        "https://dermasol-git-main-hamna-13s-projects.vercel.app",
+        "https://dermasol-dokr42jz4-hamna-13s-projects.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
