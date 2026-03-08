@@ -4,6 +4,7 @@ sqlalchemy
 python-dotenv
 supabase
 pydantic
+pydantic[email]
 requests
 beautifulsoup4
 groq
