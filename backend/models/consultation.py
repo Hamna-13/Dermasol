@@ -34,7 +34,7 @@ class Consultation(Base):
     rag_context_used = Column(JSONB, nullable=True)
     llm_output = Column(JSONB, nullable=True)
     final_response = Column(JSONB, nullable=True)
-
+    recommended_products = Column(JSONB, nullable=True)
     status = Column(String(32), nullable=False, default="COMPLETED")
     error = Column(Text, nullable=True)
 

@@ -17,6 +17,7 @@ import viralImg from "@/assets/viral.png";
 import trustImg from "@/assets/medical-ai.jpg";
 
 const Index = () => {
+  
   const conditions = [
     { name: "Acne", img: acneImg },
     { name: "Psoriasis", img: psoriasisImg },

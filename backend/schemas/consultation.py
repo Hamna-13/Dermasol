@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, List
 from uuid import UUID
 
 
@@ -42,7 +42,7 @@ class ConsultationDetail(BaseModel):
     rag_context_used: Optional[Any] = None
     llm_output: Optional[Dict[str, Any]] = None
     final_response: Optional[Dict[str, Any]] = None
-
+    recommended_products: Optional[List[Dict[str, Any]]] = None
     status: str
     error: Optional[str] = None
 

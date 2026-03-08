@@ -113,6 +113,7 @@ def create_consultation(
                     "analysis": "No skin detected in the image. Please upload a clearer image containing visible skin.",
                     "disclaimer": ""
                 },
+                recommended_products=[],
                 status="COMPLETED",
             )
             db.add(row)
@@ -209,7 +210,7 @@ def create_consultation(
             rag_context_used=rag_result.get("context_used"),
             llm_output=structured_llm_output,
             final_response=response_payload,
-
+            recommended_products=response_payload.get("recommended_products", []),
             status="COMPLETED",
         )
 
@@ -280,7 +281,6 @@ def get_consultation_detail(
     if not row:
         raise HTTPException(status_code=404, detail="Consultation not found")
 
-    # ✅ attach image_url in response
     data = {
         "id": row.id,
         "user_id": row.user_id,
@@ -300,6 +300,7 @@ def get_consultation_detail(
         "rag_context_used": row.rag_context_used,
         "llm_output": row.llm_output,
         "final_response": row.final_response,
+        "recommended_products": row.recommended_products,
         "status": row.status,
         "error": row.error,
     }
