@@ -6,6 +6,20 @@ from routers import auth, user, consultation
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 import uvicorn
+import sys
+
+# 👇 Add these debug lines
+print(f"🔍 Current working directory: {os.getcwd()}")
+print(f"🔍 PORT environment variable: {os.environ.get('PORT')}")
+print(f"🔍 Python executable: {sys.executable}")
+print("🔍 Checking if we can write to filesystem...")
+try:
+    with open('test.txt', 'w') as f:
+        f.write('test')
+    print("✅ Filesystem is writable")
+    os.remove('test.txt')
+except Exception as e:
+    print(f"❌ Filesystem error: {e}")
 app = FastAPI()
 
 app.add_middleware(
