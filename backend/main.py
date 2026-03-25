@@ -2,25 +2,13 @@ import os
 from fastapi import FastAPI, Depends
 from sqlalchemy import text
 from database import get_db
-from routers import auth, user
-# from routers import consultation
+from routers import auth, user, consultation
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 import uvicorn
 import sys
 
-# 👇 Add these debug lines
-print(f"🔍 Current working directory: {os.getcwd()}")
-print(f"🔍 PORT environment variable: {os.environ.get('PORT')}")
-print(f"🔍 Python executable: {sys.executable}")
-print("🔍 Checking if we can write to filesystem...")
-try:
-    with open('test.txt', 'w') as f:
-        f.write('test')
-    print("✅ Filesystem is writable")
-    os.remove('test.txt')
-except Exception as e:
-    print(f"❌ Filesystem error: {e}")
+
 app = FastAPI()
 
 app.add_middleware(
@@ -28,6 +16,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:8001",      # your vite runs on 8001 sometimes
         "http://127.0.0.1:8001",
+        "https://dermasol.vercel.app",
         "https://dermasol-git-main-hamna-13s-projects.vercel.app",
         "https://dermasol-dokr42jz4-hamna-13s-projects.vercel.app"
     ],
