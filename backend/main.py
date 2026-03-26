@@ -37,10 +37,10 @@ def ping():
     return {"ok": True, "message": "backend connected"}
 
 @app.get("/test-db")
-def test_db(db = Depends(get_db)):
+def test_db(db=Depends(get_db)):
     result = db.execute(text("SELECT version();"))
-    return {"db_version": result.fetchone()}
-
+    version = result.scalar()
+    return {"db_version": version}
 
 # ==============================
 # 🚀 FIX OPENAPI FOR HTTPBEARER
