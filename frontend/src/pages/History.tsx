@@ -111,7 +111,7 @@ export default function History() {
                   <Card
                     key={x.id}
                     className="overflow-hidden cursor-pointer"
-                    onClick={() => navigate(`/history/${x.id}`)} // ✅ optional detail route
+                    onClick={() => navigate(`/consultations/${x.id}`)}
                   >
                     <CardHeader>
                       <div className="flex items-start justify-between">

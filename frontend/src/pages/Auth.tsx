@@ -1,13 +1,73 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import { Activity } from 'lucide-react';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { Activity } from "lucide-react";
+
+const PROFILE_STORAGE_KEY = "dermasol_profile";
+
+type StoredProfile = {
+  fullName?: string;
+  email?: string;
+  age?: string;
+  gender?: string;
+  skinType?: string;
+  skinConcerns?: string;
+  allergies?: string;
+  currentProducts?: string;
+  medicalHistory?: string;
+};
+
+const getStoredProfile = (): StoredProfile | null => {
+  try {
+    const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const isProfileIncomplete = (profile: StoredProfile | null) => {
+  if (!profile) return true;
+
+  const importantFields = [
+    profile.fullName,
+    profile.email,
+    profile.skinType,
+    profile.skinConcerns,
+  ];
+
+  return importantFields.some((value) => !value || value.trim() === "");
+};
+
+const seedProfileFromSignup = (name: string, email: string) => {
+  const existing = getStoredProfile();
+
+  const seededProfile: StoredProfile = {
+    fullName: existing?.fullName || name,
+    email: existing?.email || email,
+    age: existing?.age || "",
+    gender: existing?.gender || "",
+    skinType: existing?.skinType || "",
+    skinConcerns: existing?.skinConcerns || "",
+    allergies: existing?.allergies || "",
+    currentProducts: existing?.currentProducts || "",
+    medicalHistory: existing?.medicalHistory || "",
+  };
+
+  localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(seededProfile));
+};
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
@@ -20,18 +80,30 @@ export default function Auth() {
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
 
     try {
       await login(email, password);
-      toast({ title: 'Login successful', description: 'Welcome back!' });
-      navigate('/');
+
+      const storedProfile = getStoredProfile();
+
+      toast({
+        title: "Login successful",
+        description: "Welcome back!",
+      });
+
+      if (isProfileIncomplete(storedProfile)) {
+        navigate("/profile");
+      } else {
+        navigate("/");
+      }
     } catch (error) {
       toast({
-        title: 'Login failed',
-        description: error instanceof Error ? error.message : 'Invalid credentials',
-        variant: 'destructive'
+        title: "Login failed",
+        description:
+          error instanceof Error ? error.message : "Invalid credentials",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -43,19 +115,27 @@ export default function Auth() {
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const name = formData.get('name') as string;
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
+    const name = formData.get("name") as string;
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
 
     try {
       await signup(email, password, name);
-      toast({ title: 'Account created', description: 'Welcome to DermaSol!' });
-      navigate('/');
+
+      seedProfileFromSignup(name, email);
+
+      toast({
+        title: "Account created",
+        description: "Complete your profile to personalize your experience.",
+      });
+
+      navigate("/profile");
     } catch (error) {
       toast({
-        title: 'Signup failed',
-        description: error instanceof Error ? error.message : 'Could not create account',
-        variant: 'destructive'
+        title: "Signup failed",
+        description:
+          error instanceof Error ? error.message : "Could not create account",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -64,16 +144,20 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md border-border shadow-sm">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="bg-primary/10 p-3 rounded-full">
+          <div className="mb-4 flex justify-center">
+            <div className="rounded-full bg-primary/10 p-3">
               <Activity className="h-8 w-8 text-primary" />
             </div>
           </div>
+
           <CardTitle className="text-2xl">Welcome to DermaSol</CardTitle>
-          <CardDescription>AI-Powered Dermatological Assistance</CardDescription>
+          <CardDescription>
+            AI-Powered Dermatological Assistance
+          </CardDescription>
         </CardHeader>
+
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
@@ -93,6 +177,7 @@ export default function Auth() {
                     required
                   />
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Password</Label>
                   <Input
@@ -103,8 +188,9 @@ export default function Auth() {
                     required
                   />
                 </div>
+
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Logging in...' : 'Login'}
+                  {isLoading ? "Logging in..." : "Login"}
                 </Button>
               </form>
             </TabsContent>
@@ -121,6 +207,7 @@ export default function Auth() {
                     required
                   />
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
                   <Input
@@ -131,6 +218,7 @@ export default function Auth() {
                     required
                   />
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
                   <Input
@@ -142,8 +230,9 @@ export default function Auth() {
                     minLength={6}
                   />
                 </div>
+
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Creating account...' : 'Sign Up'}
+                  {isLoading ? "Creating account..." : "Sign Up"}
                 </Button>
               </form>
             </TabsContent>

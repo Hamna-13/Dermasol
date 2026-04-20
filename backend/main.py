@@ -6,35 +6,40 @@ from routers import auth, user, consultation
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 import uvicorn
-import sys
-
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:8001",      # your vite runs on 8001 sometimes
+        "http://localhost:8001",
         "http://127.0.0.1:8001",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
         "https://dermasol.vercel.app",
         "https://dermasol-git-main-hamna-13s-projects.vercel.app",
-        "https://dermasol-dokr42jz4-hamna-13s-projects.vercel.app"
+        "https://dermasol-dokr42jz4-hamna-13s-projects.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 # include routers
 app.include_router(auth.router)
 app.include_router(user.router)
 app.include_router(consultation.router)
+
+
 @app.get("/")
 def root():
     return {"message": "FastAPI is running"}
 
+
 @app.get("/ping")
 def ping():
     return {"ok": True, "message": "backend connected"}
+
 
 @app.get("/test-db")
 def test_db(db=Depends(get_db)):
@@ -42,9 +47,6 @@ def test_db(db=Depends(get_db)):
     version = result.scalar()
     return {"db_version": version}
 
-# ==============================
-# 🚀 FIX OPENAPI FOR HTTPBEARER
-# ==============================
 
 def custom_openapi():
     if app.openapi_schema:
@@ -57,20 +59,21 @@ def custom_openapi():
         routes=app.routes,
     )
 
-    # ✅ Correct HTTP Bearer scheme for Swagger UI
     openapi_schema["components"]["securitySchemes"] = {
         "HTTPBearer": {
             "type": "http",
             "scheme": "bearer",
-            "bearerFormat": "JWT"
+            "bearerFormat": "JWT",
         }
     }
 
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
+
 app.openapi = custom_openapi
-# Add this at the VERY BOTTOM of your main.py file
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     print(f"🚀 Starting server on port {port}")

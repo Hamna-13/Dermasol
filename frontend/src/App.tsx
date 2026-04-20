@@ -10,7 +10,9 @@ import About from "./pages/About";
 import Conditions from "./pages/Conditions";
 import Auth from "./pages/Auth";
 import History from "./pages/History";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import Consultations from "./pages/Consultations";
 
 const queryClient = new QueryClient();
 
@@ -28,7 +30,8 @@ const App = () => (
             <Route path="/conditions" element={<Conditions />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/history" element={<History />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/consultations/:id" element={<Consultations />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

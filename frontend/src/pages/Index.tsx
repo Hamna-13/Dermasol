@@ -317,55 +317,74 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-950 text-gray-400">
-        <div className="container mx-auto px-6 py-10">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
-            <div>
-              <h3 className="text-xl font-semibold text-white mb-2">DermaSol</h3>
-              <p className="text-sm max-w-md leading-relaxed">
-                AI-powered dermatological analysis platform for accessible, reliable skin health assessment.
-              </p>
+      {/* Footer */}
+<footer className="border-t border-white/10 bg-slate-950 text-slate-300">
+  <div className="container mx-auto px-6 py-8">
+    <div className="mx-auto max-w-2xl text-center">
+      <h3 className="text-2xl font-semibold tracking-tight text-white">
+        DermaSol
+      </h3>
 
-              <div className="mt-3 text-sm space-y-1">
-                <p>
-                  <a
-                    href="mailto:dermasol.inc@gmail.com"
-                    className="hover:text-white transition-colors"
-                  >
-                    dermasol.inc@gmail.com
-                  </a>
-                </p>
-                <p>
-                  <a
-                    href="https://dermasol.com"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-white transition-colors"
-                  >
-                    dermasol.com
-                  </a>
-                </p>
-              </div>
-            </div>
+      <p className="mt-3 text-sm leading-6 text-slate-400">
+        AI-powered dermatological analysis platform for accessible, reliable skin health assessment.
+      </p>
 
-            <div className="flex gap-8 text-sm">
-              <Link to="/analysis" className="hover:text-white transition-colors">
-                Analysis
-              </Link>
-              <Link to="/conditions" className="hover:text-white transition-colors">
-                Conditions
-              </Link>
-              <Link to="/about" className="hover:text-white transition-colors">
-                About
-              </Link>
-            </div>
-          </div>
+      <nav className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
+        <Link
+          to="/"
+          className="rounded-md px-2 py-1 text-slate-400 transition-colors duration-200 hover:text-white"
+        >
+          Home
+        </Link>
+        <Link
+          to="/analysis"
+          className="rounded-md px-2 py-1 text-slate-400 transition-colors duration-200 hover:text-white"
+        >
+          Analysis
+        </Link>
+        <Link
+          to="/conditions"
+          className="rounded-md px-2 py-1 text-slate-400 transition-colors duration-200 hover:text-white"
+        >
+          Conditions
+        </Link>
+        <Link
+          to="/about"
+          className="rounded-md px-2 py-1 text-slate-400 transition-colors duration-200 hover:text-white"
+        >
+          About
+        </Link>
+        <Link
+          to="/history"
+          className="rounded-md px-2 py-1 text-slate-400 transition-colors duration-200 hover:text-white"
+        >
+          History
+        </Link>
+      </nav>
 
-          <div className="mt-8 pt-4 border-t border-gray-800 text-xs text-center">
-            © 2025 DermaSol. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      <div className="mt-5 flex flex-col items-center gap-1 text-sm text-slate-500">
+        <a
+          href="mailto:dermasol.inc@gmail.com"
+          className="transition-colors duration-200 hover:text-white"
+        >
+          dermasol.inc@gmail.com
+        </a>
+        <a
+          href="https://dermasol.com"
+          target="_blank"
+          rel="noreferrer"
+          className="transition-colors duration-200 hover:text-white"
+        >
+          dermasol.com
+        </a>
+      </div>
+
+      <div className="mt-6 border-t border-slate-800 pt-4 text-xs text-slate-500">
+        © 2025 DermaSol. All rights reserved.
+      </div>
+    </div>
+  </div>
+</footer>
     </div>
   );
 };
