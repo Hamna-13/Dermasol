@@ -10,6 +10,7 @@ import {
   Save,
   X,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,10 @@ const defaultProfile: UserProfile = {
 
 const Profile = () => {
   const { user, isAuthenticated, loading } = useAuth();
+  const navigate = useNavigate();
+    useEffect(() => {
+    navigate("/auth", { replace: true });
+  }, [navigate]);
 
   const authFullName =
     (user?.user_metadata?.full_name as string | undefined) || "";
