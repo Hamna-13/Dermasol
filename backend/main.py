@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI, Depends
 from sqlalchemy import text
 from database import get_db
-from routers import auth, user, consultation
+from routers import auth, user, consultation, review
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 import uvicorn
@@ -29,7 +29,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(user.router)
 app.include_router(consultation.router)
-
+app.include_router(review.router)
 
 @app.get("/")
 def root():

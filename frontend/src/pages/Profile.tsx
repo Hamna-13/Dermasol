@@ -10,7 +10,7 @@ import {
   Save,
   X,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,11 +44,19 @@ const defaultProfile: UserProfile = {
 };
 
 const Profile = () => {
-  const { user, isAuthenticated, loading } = useAuth();
-  const navigate = useNavigate();
-    useEffect(() => {
+const navigate = useNavigate();
+const location = useLocation();
+const { user, isAuthenticated, loading } = useAuth();
+
+useEffect(() => {
+  if (loading) return;
+
+  const cameFromInsideApp = location.state?.fromApp === true;
+
+  if (!isAuthenticated || !cameFromInsideApp) {
     navigate("/auth", { replace: true });
-  }, [navigate]);
+  }
+}, [loading, isAuthenticated, location.state, navigate]);
 
   const authFullName =
     (user?.user_metadata?.full_name as string | undefined) || "";
