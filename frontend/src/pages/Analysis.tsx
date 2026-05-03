@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import ReviewModal from "@/components/ReviewModal";
 import {
   Upload,
   FileImage,
@@ -74,6 +75,17 @@ const Analysis = () => {
     ConsultationResponse["response"] | null
   >(null);
 
+  /* ---------------- REVIEW MODAL STATES ---------------- */
+
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [latestConsultationId, setLatestConsultationId] = useState<string | null>(
+    null
+  );
+  const [reviewPending, setReviewPending] = useState(false);
+  const [pendingNavigationPath, setPendingNavigationPath] = useState<string | null>(
+    null
+  );
+
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState("");
@@ -82,6 +94,25 @@ const Analysis = () => {
 
   const { user, isAuthenticated, loading, getAccessToken } = useAuth();
   const navigate = useNavigate();
+
+  const resetReviewState = () => {
+    setShowReviewModal(false);
+    setLatestConsultationId(null);
+    setReviewPending(false);
+    setPendingNavigationPath(null);
+  };
+
+  const continuePendingNavigation = () => {
+    setShowReviewModal(false);
+    setReviewPending(false);
+
+    const path = pendingNavigationPath;
+    setPendingNavigationPath(null);
+
+    if (path) {
+      navigate(path);
+    }
+  };
 
   /* ---------------- AUTH GUARD ---------------- */
 
@@ -102,6 +133,48 @@ const Analysis = () => {
     };
   }, [previewUrl, cameraStream]);
 
+  /* ---------------- SHOW REVIEW WHEN USER TRIES TO LEAVE ---------------- */
+
+  useEffect(() => {
+    if (!reviewPending || !analysisResult) return;
+
+    const handleNavigationClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const link = target.closest("a");
+
+      if (!link) return;
+
+      const href = link.getAttribute("href");
+      if (!href) return;
+
+      // Ignore product/external links and new-tab links
+      if (link.getAttribute("target") === "_blank") return;
+
+      const url = new URL(href, window.location.origin);
+
+      // External website links should continue normally
+      if (url.origin !== window.location.origin) return;
+
+      const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      const nextPath = `${url.pathname}${url.search}${url.hash}`;
+
+      // Do not show review if user clicks the current page again
+      if (nextPath === currentPath) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      setPendingNavigationPath(nextPath);
+      setShowReviewModal(true);
+    };
+
+    document.addEventListener("click", handleNavigationClick, true);
+
+    return () => {
+      document.removeEventListener("click", handleNavigationClick, true);
+    };
+  }, [reviewPending, analysisResult]);
+
   /* ---------------- FILE UPLOAD ---------------- */
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,6 +186,9 @@ const Analysis = () => {
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
     setAnalysisResult(null);
+
+    // Reset review state when a new image is selected
+    resetReviewState();
   };
 
   const removeSelectedImage = () => {
@@ -121,6 +197,9 @@ const Analysis = () => {
     setSelectedFile(null);
     setPreviewUrl("");
     setAnalysisResult(null);
+
+    // Reset review state when image is removed
+    resetReviewState();
 
     const input = document.getElementById("file-input") as HTMLInputElement;
     if (input) input.value = "";
@@ -200,6 +279,10 @@ const Analysis = () => {
         setSelectedFile(capturedFile);
         setPreviewUrl(URL.createObjectURL(capturedFile));
         setAnalysisResult(null);
+
+        // Reset review state when a new camera photo is captured
+        resetReviewState();
+
         closeCamera();
       },
       "image/jpeg",
@@ -215,6 +298,7 @@ const Analysis = () => {
     try {
       setSubmitting(true);
       setAnalysisResult(null);
+      resetReviewState();
 
       const token = await getAccessToken();
       if (!token) throw new Error("Not authenticated");
@@ -229,7 +313,17 @@ const Analysis = () => {
         body: form,
       })) as ConsultationResponse;
 
+      console.log("Analysis result:", result);
+
       setAnalysisResult(result.response);
+
+      // Save current consultation id for review
+      const consultationId = result.id || null;
+      setLatestConsultationId(consultationId);
+
+      // Do not show the popup immediately.
+      // Mark review as pending and show it only when user tries to leave this page.
+      setReviewPending(true);
     } catch (err) {
       console.error("Analysis failed:", err);
     } finally {
@@ -498,6 +592,7 @@ const Analysis = () => {
                     onChange={(e) => {
                       setSymptoms(e.target.value);
                       setAnalysisResult(null);
+                      resetReviewState();
                     }}
                     className="min-h-[290px] resize-none rounded-2xl"
                   />
@@ -513,6 +608,7 @@ const Analysis = () => {
                       onClick={() => {
                         setSymptoms("");
                         setAnalysisResult(null);
+                        resetReviewState();
                       }}
                       disabled={!symptoms.trim()}
                     >
@@ -686,7 +782,10 @@ const Analysis = () => {
                   value={analysisResult.symptoms}
                 />
 
-                <ResultSection title="Possible Causes" value={analysisResult.causes} />
+                <ResultSection
+                  title="Possible Causes"
+                  value={analysisResult.causes}
+                />
 
                 <ResultSection
                   title="Suggested Treatment"
@@ -787,6 +886,13 @@ const Analysis = () => {
           </section>
         )}
       </main>
+
+      {/* REVIEW MODAL */}
+      <ReviewModal
+        isOpen={showReviewModal}
+        onClose={continuePendingNavigation}
+        consultationId={latestConsultationId}
+      />
     </div>
   );
 };
