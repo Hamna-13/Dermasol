@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Star, X } from "lucide-react";
+import { apiFetch } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 type ReviewModalProps = {
   isOpen: boolean;
@@ -12,12 +14,20 @@ const ReviewModal = ({ isOpen, onClose, consultationId }: ReviewModalProps) => {
   const [conditionAccurate, setConditionAccurate] = useState<string>("");
   const [productsRelevant, setProductsRelevant] = useState<string>("");
   const [satisfied, setSatisfied] = useState<string>("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const { getAccessToken } = useAuth();
 
   const resetForm = () => {
     setRating(0);
     setConditionAccurate("");
     setProductsRelevant("");
     setSatisfied("");
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
   };
 
   useEffect(() => {
@@ -41,31 +51,49 @@ const ReviewModal = ({ isOpen, onClose, consultationId }: ReviewModalProps) => {
   const isFormComplete =
     rating > 0 && conditionAccurate && productsRelevant && satisfied;
 
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
+  const handleSubmit = async () => {
+    if (!isFormComplete || submitting) return;
 
-  const handleSubmit = () => {
-    if (!isFormComplete) return;
+    try {
+      setSubmitting(true);
 
-    const reviewData = {
-      consultation_id: consultationId,
-      rating,
-      condition_identified_accurately: conditionAccurate,
-      products_recommended_according_to_intent: productsRelevant,
-      satisfied_experience: satisfied,
-    };
+      const token = await getAccessToken();
 
-    console.log("Review data:", reviewData);
+      if (!token) {
+        alert("You must be logged in to submit a review.");
+        return;
+      }
 
-    /*
-      Later, when backend lead gives you API,
-      you will send this reviewData using fetch().
-    */
+      const reviewData = {
+        rating,
+        condition_identification: conditionAccurate === "yes",
+        products_recommended: productsRelevant === "yes",
+        experience: satisfied === "yes",
+      };
 
-    resetForm();
-    onClose();
+      console.log("Submitting review:", reviewData);
+
+      await apiFetch("/reviews/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(reviewData),
+      });
+
+      if (consultationId) {
+        localStorage.setItem(`review_submitted_${consultationId}`, "true");
+      }
+
+      resetForm();
+      onClose();
+    } catch (error) {
+      console.error("Review submission failed:", error);
+      alert("Could not submit review. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const YesNoQuestion = ({
@@ -85,11 +113,12 @@ const ReviewModal = ({ isOpen, onClose, consultationId }: ReviewModalProps) => {
           <button
             type="button"
             onClick={() => setValue("yes")}
+            disabled={submitting}
             className={`rounded-full px-5 py-2 text-sm font-medium border transition ${
               value === "yes"
                 ? "bg-teal-600 text-white border-teal-600"
                 : "bg-white text-gray-700 border-gray-300 hover:border-teal-500"
-            }`}
+            } ${submitting ? "cursor-not-allowed opacity-70" : ""}`}
           >
             Yes
           </button>
@@ -97,11 +126,12 @@ const ReviewModal = ({ isOpen, onClose, consultationId }: ReviewModalProps) => {
           <button
             type="button"
             onClick={() => setValue("no")}
+            disabled={submitting}
             className={`rounded-full px-5 py-2 text-sm font-medium border transition ${
               value === "no"
                 ? "bg-teal-600 text-white border-teal-600"
                 : "bg-white text-gray-700 border-gray-300 hover:border-teal-500"
-            }`}
+            } ${submitting ? "cursor-not-allowed opacity-70" : ""}`}
           >
             No
           </button>
@@ -126,7 +156,8 @@ const ReviewModal = ({ isOpen, onClose, consultationId }: ReviewModalProps) => {
           <button
             type="button"
             onClick={handleClose}
-            className="rounded-full p-2 text-gray-500 hover:bg-gray-100"
+            disabled={submitting}
+            className="rounded-full p-2 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-70"
             aria-label="Close review popup"
           >
             <X size={20} />
@@ -144,7 +175,8 @@ const ReviewModal = ({ isOpen, onClose, consultationId }: ReviewModalProps) => {
                 key={star}
                 type="button"
                 onClick={() => setRating(star)}
-                className="transition hover:scale-110"
+                disabled={submitting}
+                className="transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-70"
                 aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
               >
                 <Star
@@ -184,7 +216,8 @@ const ReviewModal = ({ isOpen, onClose, consultationId }: ReviewModalProps) => {
           <button
             type="button"
             onClick={handleClose}
-            className="rounded-full border border-gray-300 px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            disabled={submitting}
+            className="rounded-full border border-gray-300 px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-70"
           >
             Maybe Later
           </button>
@@ -192,14 +225,14 @@ const ReviewModal = ({ isOpen, onClose, consultationId }: ReviewModalProps) => {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={!isFormComplete}
+            disabled={!isFormComplete || submitting}
             className={`rounded-full px-5 py-2 text-sm font-medium text-white transition ${
-              isFormComplete
+              isFormComplete && !submitting
                 ? "bg-teal-600 hover:bg-teal-700"
                 : "cursor-not-allowed bg-gray-400"
             }`}
           >
-            Submit Review
+            {submitting ? "Submitting..." : "Submit Review"}
           </button>
         </div>
       </div>
