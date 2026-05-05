@@ -53,7 +53,7 @@ useEffect(() => {
 
   const cameFromInsideApp = location.state?.fromApp === true;
 
-  if (!isAuthenticated || !cameFromInsideApp) {
+  if (!isAuthenticated) {
     navigate("/auth", { replace: true });
   }
 }, [loading, isAuthenticated, location.state, navigate]);
