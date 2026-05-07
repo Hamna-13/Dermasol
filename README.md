@@ -18,8 +18,8 @@ Agentic DermaSol aims to create an affordable, accessible, and localized AI-powe
 
 ## Technologies
 - **Frontend:** React, TailwindCSS
-- **Backend:** Django REST Framework/ FAST API
-- **Database:** PostgreSQL, MongoDB
+- **Backend:** FAST API
+- **Database:** PostgreSQL
 - **Tools:** GitHub, Postman, Docker
 
 ## Market Potential
